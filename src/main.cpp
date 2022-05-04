@@ -142,6 +142,8 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
     Serial.println("MQTT:" + String(Topic) + " : " + rcv);
 
     if (msg.find(".leds") != std::string::npos) {
+        // TODO: Use JSON instead of custom thingy
+        // =============
         States.LEDConnected = false;
         std::string sdelay;
         std::string slen;
@@ -155,6 +157,7 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
         if (msg.find("-l") != std::string::npos) {
             slen = lmsg.substr(msg.find("-l") + 2, msg.find("_EL_") - msg.find("-l") + 2 - 4);
         }
+        // ===============
 
         int del = std::atoi(sdelay.c_str());
         int len = std::atoi(slen.c_str());

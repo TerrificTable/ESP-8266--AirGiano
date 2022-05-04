@@ -47,7 +47,10 @@ typedef struct {
     unsigned long   MQTTConnectingWaitTimeOut   = 0;
 
     boolean         LEDConnected                = false;  
-
+    boolean         LED_Finished                = true;
+    unsigned long   LED_Timeout                 = 0;  
+    unsigned long   SLED_Timeout                = 0;  
+    unsigned long   often                       = 0;  
 
 } StatesData;
 
@@ -64,6 +67,57 @@ CRGB leds[LED_Count];
 
 
 
+
+void SetAllLED(CRGB  c) {
+
+    for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
+    FastLED.setBrightness(100);
+    FastLED.show();
+}
+
+void SetLED(int LED_index, CRGB  c) {
+    leds[LED_index] = c;
+    FastLED.setBrightness(100);
+    FastLED.show();
+}
+
+void LED(int length, CRGB color, int del) {
+
+    if (!States.LEDConnected) {
+        Serial.println("LED init..");
+        FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, LED_Count);  
+        SetAllLED(CRGB::Black);
+        FastLED.setBrightness(100);              
+        FastLED.clear();  // clear all pixel data
+        FastLED.show();
+
+
+        States.LED_Finished = false;
+        if (!States.LED_Finished) { //  && often != length * LED_Used
+            leds[States.often / (length * LED_Used)] = color; 
+            FastLED.show();
+
+            if (States.SLED_Timeout > 0 && States.SLED_Timeout < millis()) return;
+            States.SLED_Timeout = millis() + del * 10;
+
+            leds[States.often / (length * LED_Used)] = CRGB::Black; 
+            FastLED.show();
+
+            Serial.println(length * LED_Used);
+            Serial.println(States.often);
+
+            States.often++; 
+            if (States.often == length) {
+                States.LED_Finished = true;
+                States.often = 0;
+            }
+        }
+
+        FastLED.setBrightness(30);              
+
+        States.LEDConnected = true;
+    }
+}
 
 String convert_stdstring_string(std::string str) {
     char stage_1[str.length() + 1];
@@ -89,44 +143,6 @@ std::string convert_string_stdstring(String str) {
     return result;
 }
 
-void SetAllLED(CRGB  c) {
-
-    for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
-    FastLED.setBrightness(100);
-    FastLED.show();
-}
-
-void SetLED(int LED_index, CRGB  c) {
-    leds[LED_index] = c;
-    FastLED.setBrightness(100);
-    FastLED.show();
-}
-
-void LED(int length, CRGB color, int del) {
-
-    if (!States.LEDConnected) {
-        Serial.println("LED init..");
-        FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, LED_Count);  
-        SetAllLED(CRGB::Black);
-        FastLED.setBrightness(100);              
-        FastLED.clear();  // clear all pixel data
-        FastLED.show();
-
-        for (int a = 0; a < length; a++) {
-            for (int i = 0; i < LED_Used; i++) { 
-                leds[i] = color; 
-                FastLED.show();
-                delay(del);
-                leds[i] = CRGB::Black; 
-                FastLED.show();  
-            }
-        }
-
-        FastLED.setBrightness(30);              
-
-        States.LEDConnected = true;
-    }
-}
 
 void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
     String rcv = "";
@@ -141,7 +157,7 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
     Serial.println("MQTT:" + String(Topic) + " : " + rcv);
 
-    if (msg.find(".leds") != std::string::npos) {
+    if (msg.find(".leds") != std::string::npos || !States.LED_Finished) {
         States.LEDConnected = false;
         std::string sdelay;
         std::string slen;
@@ -158,6 +174,7 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
         int del = std::atoi(sdelay.c_str());
         int len = std::atoi(slen.c_str());
+        States.SLED_Timeout = millis() + (del * 100);
 
         if (len != 0 && del != 0) {
             if (msg.find("red") != std::string::npos) {

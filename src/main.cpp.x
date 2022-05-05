@@ -10,8 +10,6 @@
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
 
-#include "json/json.h"
-
 // OLED pins
 #define SDA D1
 #define SCL D2
@@ -63,6 +61,7 @@ StatesData States;
 #define LED_TYPE    WS2812B
 
 CRGB leds[LED_Count];
+
 
 
 
@@ -142,187 +141,64 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
     Serial.println("MQTT:" + String(Topic) + " : " + rcv);
 
-    // TODO: Parse Json
-    // =============
-    std::stringstream ss(msg); //simulating an response stream
-    const unsigned int BUFFERSIZE = 256;
-
-    //temporary buffer
-    char buffer[BUFFERSIZE];
-    memset(buffer, 0, BUFFERSIZE * sizeof(char));
-
-    //returnValue.first holds the variables name
-    //returnValue.second holds the variables value
-    std::pair<std::string, std::string> returnValue;
+    if (msg.find(".leds") != std::string::npos) {
+        // TODO: Use JSON instead of custom thingy
+        // =============
+        States.LEDConnected = false;
+        std::string sdelay;
+        std::string slen;
 
 
+        std::string dmsg = msg;
+        std::string lmsg = msg;
+        if (msg.find("-d") != std::string::npos) {
+            sdelay = dmsg.substr(msg.find("-d") + 2, msg.find("_ED_") - msg.find("-d") + 2 - 4);
+        }
+        if (msg.find("-l") != std::string::npos) {
+            slen = lmsg.substr(msg.find("-l") + 2, msg.find("_EL_") - msg.find("-l") + 2 - 4);
+        }
+        // ===============
 
+        int del = std::atoi(sdelay.c_str());
+        int len = std::atoi(slen.c_str());
+        Serial.println(del);
+        Serial.println(len);
 
-    // --------------- CUT HERE FOR EXCEPTION DECODER ---------------
-    // Soft WDT reset
-
-    // >>>stack>>>
-
-    // ctx: cont
-    // sp: 3ffffad0 end: 3fffffc0 offset: 01a0
-    // 3ffffc70:  00000000 3fff1d4c 3ffef1f8 4021f607
-    // 3ffffc80:  3ffffcd0 00000100 3ffffdd0 402176e9
-    // 3ffffc90:  3ffffe00 3ffef1f8 3ffffeb4 fffffff9  
-    // 3ffffca0:  3ffffeb4 3ffef1f8 3ffffdd0 4021773c
-    // 3ffffcb0:  3ffe8900 3ffffea4 3ffffdd0 fffffff9
-    // 3ffffcc0:  3ffffeb4 3ffef1f8 3ffffdd0 40201818  
-    // 3ffffcd0:  6f6c0000 37300072 48206e5c 6f6c6c61
-    // 3ffffce0:  6e5c6e5c 352e3520 3230322e 00000032
-    // 3ffffcf0:  00000000 00000000 00000000 00000000
-    // 3ffffd00:  00000000 00000000 00000000 00000000  
-    // 3ffffd10:  00000000 00000000 00000000 00000000
-    // 3ffffd20:  00000000 00000000 00000000 00000000
-    // 3ffffd30:  00000000 00000000 00000000 00000000
-    // 3ffffd40:  00000000 00000000 00000000 00000000
-    // 3ffffd50:  00000000 00000000 00000000 00000000
-    // 3ffffd60:  00000000 00000000 00000000 00000000
-    // 3ffffd70:  00000000 00000000 00000000 00000000  
-    // 3ffffd80:  00000000 00000000 00000000 00000000
-    // 3ffffd90:  00000000 00000000 00000000 00000000
-    // 3ffffda0:  00000000 00000000 00000000 00000000
-    // 3ffffdb0:  00000000 00000000 00000000 00000000  
-    // 3ffffdc0:  00000000 00000000 00000000 00000000
-    // 3ffffdd0:  40209f14 00000000 40209f28 40209ed0
-    // 3ffffde0:  3fff1eb0 3fff1ee4 3fff1efb 3fff1eb0  
-    // 3ffffdf0:  3fff1eb0 3fff1efb 3fff032c 00000018
-    // 3ffffe00:  3fff1eb0 40209f3c 00000006 00000000
-    // 3ffffe10:  00001002 00000000 00000004 00000000
-    // 3ffffe20:  00000000 00000000 00000000 00000000  
-    // 3ffffe30:  00000000 00000000 00000000 00000000
-    // 3ffffe40:  00000000 00000000 00000000 00000000
-    // 3ffffe50:  00000000 00000000 00000000 00000000  
-    // 3ffffe60:  00000000 00000000 00000008 3ffffe28
-    // 3ffffe70:  3fff032c 00000000 3fff0000 3ffffddc
-    // 3ffffe80:  3fff0008 3ffeffe0 3ffeffe8 3fff1c00
-    // 3ffffe90:  001d001f 80006e5c 3fff1d58 4020229c  
-    // 3ffffea0:  00000000 3fff1b64 004b004f 0a002265
-    // 3ffffeb0:  3fff1c58 3fff1d58 0000005a 3fff2080
-    // 3ffffec0:  007d005c 3fffdad0 3ffef40c 00000030  
-    // 3ffffed0:  3fffff00 00000001 00000002 0000005c
-    // 3ffffee0:  000010c3 0000000d 3ffef194 40208d80
-    // 3ffffef0:  000010c3 3ffef194 3ffef194 40202948
-    // 3fffff00:  00000001 3fffdad0 3ffef40c 00000030  
-    // 3fffff10:  00000000 3fff1c4c 3fffff50 40205c25
-    // 3fffff20:  3fffdad0 3ffef194 3ffef194 3ffef40c
-    // 3fffff30:  3fffdad0 3ffef194 3ffef178 40201d52
-    // 3fffff40:  4024dc6f 0023002f 80208d88 40208d70
-    // 3fffff50:  3fff0fa4 4020470c 8064a8c0 3fff1d00
-    // 3fffff60:  007a1200 18abdb3e 3ffef100 40201b78
-    // 3fffff70:  00000000 4564a8c0 3ffef1f8 3ffef40c  
-    // 3fffff80:  3fffdad0 00000000 3ffef3cc 40201ee8
-    // 3fffff90:  3fffdad0 00000000 3ffef3cc 401003f5
-    // 3fffffa0:  feefeffe feefeffe 3ffef3cc 40206738  
-    // 3fffffb0:  feefeffe feefeffe 3ffe8694 40101195
-    // <<<stack<<<
-
-    // --------------- CUT HERE FOR EXCEPTION DECODER ---------------
-
-    //  ets Jan  8 2013,rst cause:2, boot mode:(3,7)
-
-    // load 0x4010f000, len 3584, room 16
-    // tail 0
-    // chksum 0xb0
-    // csum 0xb0
-    // v2843a5ac
-    // ~ld
-
-
-
-
-    while(ss.peek() != '{')         
-    {
-        ss.ignore();
-    }
-
-    //get response values until the closing bracket appears
-    while(ss.peek() != '}')
-    {
-        //read until a opening variable quote sign appears
-        ss.get(buffer, BUFFERSIZE, '\"'); 
-        //and ignore it (go to next position in stream)
-        ss.ignore();
-
-        //read variable token excluding the closing variable quote sign
-        ss.get(buffer, BUFFERSIZE, '\"');
-        //and ignore it (go to next position in stream)
-        ss.ignore();
-        //store the variable name
-        returnValue.first = buffer;
-
-        //read until opening value quote appears(skips the : sign)
-        ss.get(buffer, BUFFERSIZE, '\"');
-        //and ignore it (go to next position in stream)
-        ss.ignore();
-
-        //read value token excluding the closing value quote sign
-        ss.get(buffer, BUFFERSIZE, '\"');
-        //and ignore it (go to next position in stream)
-        ss.ignore();
-        //store the variable name
-        returnValue.second = buffer;
-
-        
-        // Serial.println(convert_stdstring_string(returnValue.first) + " = " + convert_stdstring_string(returnValue.second));
-        if (returnValue.first == "message") {
-            if (returnValue.second == ".leds") {
-                String color = "";
-                int del = 0;
-                int len = 0;
-                
-                
-                if (returnValue.first == "color") 
-                    color = convert_stdstring_string(returnValue.second);
-                if (returnValue.first == "delay") 
-                    del = atoi(returnValue.second.c_str());
-                if (returnValue.first == "length") 
-                    len = atoi(returnValue.second.c_str());
-
-                // =============        
-
-
-                if (color != "") {
-                    if ((len != 0) && (del != 0)) {
-                        if (msg.find("red") != std::string::npos) {
-                            LED(len, CRGB::Red, del);
-                        }
-                        else if (msg.find("green") != std::string::npos) {
-                            LED(len, CRGB::Green, del);
-                        }
-                        else if (msg.find("blue") != std::string::npos) {
-                            LED(len, CRGB::Blue, del);
-                        } else {
-                            LED(len, CRGB::Yellow, del);
-                        }
-                    } else {
-                        if (msg.find("red") != std::string::npos) {
-                            LED(3, CRGB::Red, 30);
-                        }
-                        else if (msg.find("green") != std::string::npos) {
-                            LED(3, CRGB::Green, 30);
-                        }
-                        else if (msg.find("blue") != std::string::npos) {
-                            LED(3, CRGB::Blue, 30);
-                        } else {
-                            LED(3, CRGB::Yellow, 30);
-                        }
-                    }
-                }
+        if (len != 0 && del != 0) {
+            if (msg.find("red") != std::string::npos) {
+                LED(len, CRGB::Red, del);
+            }
+            else if (msg.find("green") != std::string::npos) {
+                LED(len, CRGB::Green, del);
+            }
+            else if (msg.find("blue") != std::string::npos) {
+                LED(len, CRGB::Blue, del);
             } else {
-                display.clearDisplay();
-                display.display();
-
-                display.setTextColor(WHITE);
-                display.setTextSize(2);
-                display.setCursor(10, 0);
-                display.println(convert_stdstring_string(returnValue.second)); // json["message"].GetString()
-                display.display();
+                LED(len, CRGB::Yellow, del);
+            }
+        } else {
+            if (msg.find("red") != std::string::npos) {
+                LED(3, CRGB::Red, 30);
+            }
+            else if (msg.find("green") != std::string::npos) {
+                LED(3, CRGB::Green, 30);
+            }
+            else if (msg.find("blue") != std::string::npos) {
+                LED(3, CRGB::Blue, 30);
+            } else {
+                LED(3, CRGB::Yellow, 30);
             }
         }
+        
+    } else {
+        display.clearDisplay();
+        display.display();
+
+        display.setTextColor(WHITE);
+        display.setTextSize(2);
+        display.setCursor(10, 0);
+        display.println(convert_stdstring_string(msg));
+        display.display();
     }
 }
 
@@ -403,7 +279,7 @@ void MQTT() {
         MQTTClient.setCallback(MQTTCallBack);
         Serial.println("MQTTClient Connected");
         
-        String Tmp = "AirGiano/json";
+        String Tmp = "AirGiano/recv";
         Serial.println("MQTTClient Subscribe: " + Tmp);
     
         MQTTClient.subscribe(Tmp.c_str());

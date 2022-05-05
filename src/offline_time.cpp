@@ -245,6 +245,4 @@ void loop(){
 
     LED(5, CRGB::Cyan, 30);
     mainFunc();
-
-
 }

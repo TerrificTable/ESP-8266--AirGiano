@@ -29,7 +29,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #ifndef STASSID
 #define STASSID     name
-#define STAPSK      password
+#define STAPSK      passwd
 #endif
 
 const char *ssid = STASSID;
@@ -67,6 +67,8 @@ StatesData States;
 #define LED_PIN     3
 #define LED_TYPE    WS2812B
 
+#define CURSER_Pos  0
+
 CRGB leds[LED_Count];
 
 
@@ -82,7 +84,6 @@ String convert_stdstring_string(std::string str) {
 
     return result;
 }
-
 std::string convert_string_stdstring(String str) {
     char stage_1[str.length() + 1];
     strcpy(stage_1, str.c_str());
@@ -94,18 +95,26 @@ std::string convert_string_stdstring(String str) {
 
     return result;
 }
-
 void SetAllLED(CRGB  c) {
 
     for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
     FastLED.setBrightness(100);
     FastLED.show();
 }
-
 void SetLED(int LED_index, CRGB  c) {
     leds[LED_index] = c;
     FastLED.setBrightness(100);
     FastLED.show();
+}
+void DisplayText(String text) {
+    display.clearDisplay();
+    display.display();
+
+    display.setTextColor(WHITE);
+    display.setTextSize(2);
+    display.setCursor(CURSER_Pos, 0);
+    display.println(text);
+    display.display();
 }
 
 void LED(int length, CRGB color, int del) {
@@ -197,57 +206,38 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
             }
         }
     } else {
-        display.clearDisplay();
-        display.display();
-
-        display.setTextColor(WHITE);
-        display.setTextSize(2);
-        display.setCursor(10, 0);
-        display.println(message); // json["message"].GetString()
-        display.display();
+        DisplayText(message);
     }
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(100);Serial.println("\nBooting...");
+    delay(100);
+    
+    Serial.println("\nBooting...");
 
     display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
     display.clearDisplay();
     display.display();
 
-    display.setTextColor(WHITE);
-    display.setTextSize(2);
-    display.setCursor(10, 0);
-    display.println("HALLO!");
-    display.display();
+    DisplayText("\nStarting...");
 }
 
 void WLAN() {
     if (! States.WLANConnected &&  WiFi.status() == WL_CONNECTED) {
         States.WLANConnecting = false;
         States.WLANConnectingWaitTimeOut = 0;
-        Serial.print("WiFi Connected : ");
-        Serial.println(WiFi.localIP());
+        Serial.print("WiFi Connected: ");
+        String IP = WiFi.localIP().toString();
+
+        Serial.println(IP);
+        DisplayText("WiFi: \n" + IP);
     }
 
     States.WLANConnected = WiFi.status() == WL_CONNECTED || WiFi.status()  == WL_IDLE_STATUS;
     
     if (States.WLANConnected) return;  
     
-    /*
-    typedef enum {
-        WL_NO_SHIELD        = 255,   // for compatibility with WiFi Shield library
-        WL_IDLE_STATUS      = 0,
-        WL_NO_SSID_AVAIL    = 1,
-        WL_SCAN_COMPLETED   = 2,
-        WL_CONNECTED        = 3,
-        WL_CONNECT_FAILED   = 4,
-        WL_CONNECTION_LOST  = 5,
-        WL_DISCONNECTED     = 6
-    } wl_status_t;
-    */
-    //Serial.println(WiFi.status());
     
     if (States.WLANConnectingWaitTimeOut > 0 && millis() < States.WLANConnectingWaitTimeOut ) return;
     if (States.WLANConnectingWaitTimeOut > 0 && millis() > States.WLANConnectingWaitTimeOut ) States.WLANConnectingWaitTimeOut = 0;
@@ -256,8 +246,8 @@ void WLAN() {
     if (!States.WLANConnecting) {
         States.WLANConnecting = true;
         States.WLANConnectingTimeOut = millis() + 10000;  // 10 Sekunfen
-        States.MQTTConnected = false;
         Serial.println("WiFi connecting....");
+        DisplayText("WiFi connecting....");
         
         WiFi.persistent(false); 
         WiFi.mode( WIFI_OFF );
@@ -270,10 +260,10 @@ void WLAN() {
     if (States.WLANConnecting &&  millis() > States.WLANConnectingTimeOut) {
         States.WLANConnecting  = false;
         Serial.println("WiFi connecting failed....");
+        DisplayText("WiFi Failed");
         States.WLANConnectingWaitTimeOut = millis() + 10000;
     }
 }
-
 void MQTT() {
     if (! States.WLANConnected) return;
 

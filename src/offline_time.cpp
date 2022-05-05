@@ -151,7 +151,7 @@ void mainFunc() {
 
 void setup() {
     Serial.begin(115200);
-    delay(100);Serial.println("\nBooting...");
+    delay(100);Serial.println("\nStarting...");
 
     display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
     display.clearDisplay();

@@ -141,16 +141,7 @@ void mainFunc() {
 
         DisplayText(currTime);
         Serial.println(currTime);
-
-        // display.clearDisplay();
-        // display.display();
-
-        // display.setTextColor(WHITE);
-        // display.setTextSize(2);
-        // display.setCursor(CURSER_Pos, 0);
-        // display.println(currTime);
-        // display.display();
-
+        
 
         States.timeout = millis() + 1000;
         States.updateTime = false;

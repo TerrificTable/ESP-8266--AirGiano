@@ -4,13 +4,14 @@
 
 #include <SPI.h>
 #include <Wire.h>
+#include <time.h>
+#include <string>
 #include <stdio.h>
 #include <iostream>
+#include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
-
-#include "json/json.h"
 
 // OLED pins
 #define SDA D1
@@ -130,79 +131,76 @@ void LED(int length, CRGB color, int del) {
 }
 
 void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
+
     String rcv = "";
 
     for (unsigned int i = 0; i < length; i++)
     {
-        rcv += (char)payload[i]; // convert *byte to string
+       rcv += (char)payload[i]; // convert *byte to string
     }
 
-    std::string msg = convert_string_stdstring(rcv);
-    rcv.replace("\n", "\\n");
 
-    Serial.println("MQTT:" + String(Topic) + " : " + rcv);
-
-    // TODO: Parse Json
     // =============
+    DynamicJsonDocument doc(4096);
+    DeserializationError error = deserializeJson(doc, payload, length);
+
+    if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str()); 
+        return;  
+    }
+
+    String message          = doc["message"];   
+    String color            = doc["color"];   
 
 
 
-
-
-
-
-    if (json.message == ".leds") {
-        String color = "";
+    if (message == ".leds") {
+        color = "";
         int del = 0;
         int len = 0;
-        
-        
-        if (returnValue.first == "color") 
-            color = convert_stdstring_string(json);
-        if (returnValue.first == "delay") 
-            del = atoi(json.c_str());
-        if (returnValue.first == "length") 
-            len = atoi(json.c_str());
+
+
+        del = atoi(doc["delay"]);
+        len = atoi(doc["length"]);
 
         // =============        
 
 
-        if (color != "") {
-            if ((len != 0) && (del != 0)) {
-                if (msg.find("red") != std::string::npos) {
-                    LED(len, CRGB::Red, del);
-                }
-                else if (msg.find("green") != std::string::npos) {
-                    LED(len, CRGB::Green, del);
-                }
-                else if (msg.find("blue") != std::string::npos) {
-                    LED(len, CRGB::Blue, del);
-                } else {
-                    LED(len, CRGB::Yellow, del);
-                }
+        if ((len != 0) && (del != 0)) {
+            if (color == "red") {
+                LED(len, CRGB::Red, del);
+            }
+            else if (color == "green") {
+                LED(len, CRGB::Green, del);
+            }
+            else if (color == "blue") {
+                LED(len, CRGB::Blue, del);
             } else {
-                if (msg.find("red") != std::string::npos) {
-                    LED(3, CRGB::Red, 30);
-                }
-                else if (msg.find("green") != std::string::npos) {
-                    LED(3, CRGB::Green, 30);
-                }
-                else if (msg.find("blue") != std::string::npos) {
-                    LED(3, CRGB::Blue, 30);
-                } else {
-                    LED(3, CRGB::Yellow, 30);
-                }
+                LED(len, CRGB::Yellow, del);
             }
         } else {
-            display.clearDisplay();
-            display.display();
-
-            display.setTextColor(WHITE);
-            display.setTextSize(2);
-            display.setCursor(10, 0);
-            display.println(convert_stdstring_string(returnValue.second)); // json["message"].GetString()
-            display.display();
+            if (color == "red") {
+                LED(3, CRGB::Red, 30);
+            }
+            else if (color == "green") {
+                LED(3, CRGB::Green, 30);
+            }
+            else if (color == "blue") {
+                LED(3, CRGB::Blue, 30);
+            } else {
+                LED(3, CRGB::Yellow, 30);
+            }
         }
+    } else {
+        display.clearDisplay();
+        display.display();
+
+        display.setTextColor(WHITE);
+        display.setTextSize(2);
+        display.setCursor(10, 0);
+        display.println(message); // json["message"].GetString()
+        display.display();
     }
 }
 

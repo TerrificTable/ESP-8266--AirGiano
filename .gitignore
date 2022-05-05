@@ -9,4 +9,4 @@
 .vscode/ipch
 test.*
 *.exe
-Config.h.x
+Config.h

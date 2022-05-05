@@ -17,9 +17,11 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
 typedef struct {
-    boolean         LEDConnected                = false;  
-    boolean         updateTime                  = false;
-    unsigned long   timeout                     = 0;            
+    boolean         LEDConnected                = false;
+
+
+    boolean         updateTime                  = false;        
+    unsigned long   timeout                     = 0;      
 } StatesData;
 
 StatesData States;

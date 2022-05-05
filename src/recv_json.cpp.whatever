@@ -24,8 +24,8 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #ifndef STASSID
-#define STASSID "AMIGO Event 2021"
-#define STAPSK "HrFC4G&nwm"
+#define STASSID Config.name
+#define STAPSK Config.password
 #endif
 
 const char *ssid = STASSID;

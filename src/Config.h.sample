@@ -1,0 +1,7 @@
+#ifdef CONFIG_h
+const char *name    = "WLAN NAME";
+const char *passwd  = "WLAN PASSWORD";
+#else
+extern const char *name;
+extern const char *password;
+#endif

@@ -121,7 +121,7 @@ void LED(int length, CRGB color, int del) {
 
     if (!States.LEDConnected) {
         Serial.println("\nLED init..");
-        DisplayText("\nLED init...");
+        DisplayText("\nLED init..");
         
         FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, LED_Count);  
         SetAllLED(CRGB::Black);

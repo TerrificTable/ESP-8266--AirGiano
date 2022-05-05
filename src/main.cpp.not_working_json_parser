@@ -10,6 +10,8 @@
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
 
+#include "json/json.h"
+
 // OLED pins
 #define SDA D1
 #define SCL D2
@@ -61,7 +63,6 @@ StatesData States;
 #define LED_TYPE    WS2812B
 
 CRGB leds[LED_Count];
-
 
 
 
@@ -141,62 +142,111 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
     Serial.println("MQTT:" + String(Topic) + " : " + rcv);
 
-    if (msg.find(".leds") != std::string::npos) {
-        // TODO: Use JSON instead of custom thingy
-        // =============
-        States.LEDConnected = false;
-        std::string sdelay;
-        std::string slen;
+    // TODO: Parse Json
+    // =============
+    std::stringstream ss(msg); //simulating an response stream
+    const unsigned int BUFFERSIZE = 256;
 
+    //temporary buffer
+    char buffer[BUFFERSIZE];
+    memset(buffer, 0, BUFFERSIZE * sizeof(char));
 
-        std::string dmsg = msg;
-        std::string lmsg = msg;
-        if (msg.find("-d") != std::string::npos) {
-            sdelay = dmsg.substr(msg.find("-d") + 2, msg.find("_ED_") - msg.find("-d") + 2 - 4);
-        }
-        if (msg.find("-l") != std::string::npos) {
-            slen = lmsg.substr(msg.find("-l") + 2, msg.find("_EL_") - msg.find("-l") + 2 - 4);
-        }
-        // ===============
+    //returnValue.first holds the variables name
+    //returnValue.second holds the variables value
+    std::pair<std::string, std::string> returnValue;
 
-        int del = std::atoi(sdelay.c_str());
-        int len = std::atoi(slen.c_str());
+    //read until the opening bracket appears
+    while(ss.peek() != '{')         
+    {
+        //ignore the { sign and go to next position
+        ss.ignore();
+    }
 
-        if (len != 0 && del != 0) {
-            if (msg.find("red") != std::string::npos) {
-                LED(len, CRGB::Red, del);
-            }
-            else if (msg.find("green") != std::string::npos) {
-                LED(len, CRGB::Green, del);
-            }
-            else if (msg.find("blue") != std::string::npos) {
-                LED(len, CRGB::Blue, del);
-            } else {
-                LED(len, CRGB::Yellow, del);
-            }
-        } else {
-            if (msg.find("red") != std::string::npos) {
-                LED(3, CRGB::Red, 30);
-            }
-            else if (msg.find("green") != std::string::npos) {
-                LED(3, CRGB::Green, 30);
-            }
-            else if (msg.find("blue") != std::string::npos) {
-                LED(3, CRGB::Blue, 30);
-            } else {
-                LED(3, CRGB::Yellow, 30);
-            }
-        }
+    //get response values until the closing bracket appears
+    while(ss.peek() != '}')
+    {
+        //read until a opening variable quote sign appears
+        ss.get(buffer, BUFFERSIZE, '\"'); 
+        //and ignore it (go to next position in stream)
+        ss.ignore();
+
+        //read variable token excluding the closing variable quote sign
+        ss.get(buffer, BUFFERSIZE, '\"');
+        //and ignore it (go to next position in stream)
+        ss.ignore();
+        //store the variable name
+        returnValue.first = buffer;
+
+        //read until opening value quote appears(skips the : sign)
+        ss.get(buffer, BUFFERSIZE, '\"');
+        //and ignore it (go to next position in stream)
+        ss.ignore();
+
+        //read value token excluding the closing value quote sign
+        ss.get(buffer, BUFFERSIZE, '\"');
+        //and ignore it (go to next position in stream)
+        ss.ignore();
+        //store the variable name
+        returnValue.second = buffer;
+
+        //do something with those extracted values
         
-    } else {
-        display.clearDisplay();
-        display.display();
+        // Serial.println(convert_stdstring_string(returnValue.first) + " = " + convert_stdstring_string(returnValue.second));
+        if (returnValue.first == "message") {
+            if (returnValue.second == ".leds") {
+                String color = "";
+                int del = 0;
+                int len = 0;
+                
+                
+                if (returnValue.first == "color") 
+                    color = convert_stdstring_string(returnValue.second);
+                if (returnValue.first == "delay") 
+                    del = atoi(returnValue.second.c_str());
+                if (returnValue.first == "length") 
+                    len = atoi(returnValue.second.c_str());
 
-        display.setTextColor(WHITE);
-        display.setTextSize(2);
-        display.setCursor(10, 0);
-        display.println(convert_stdstring_string(msg));
-        display.display();
+                // =============        
+
+
+                if (color != "") {
+                    if ((len != 0) && (del != 0)) {
+                        if (msg.find("red") != std::string::npos) {
+                            LED(len, CRGB::Red, del);
+                        }
+                        else if (msg.find("green") != std::string::npos) {
+                            LED(len, CRGB::Green, del);
+                        }
+                        else if (msg.find("blue") != std::string::npos) {
+                            LED(len, CRGB::Blue, del);
+                        } else {
+                            LED(len, CRGB::Yellow, del);
+                        }
+                    } else {
+                        if (msg.find("red") != std::string::npos) {
+                            LED(3, CRGB::Red, 30);
+                        }
+                        else if (msg.find("green") != std::string::npos) {
+                            LED(3, CRGB::Green, 30);
+                        }
+                        else if (msg.find("blue") != std::string::npos) {
+                            LED(3, CRGB::Blue, 30);
+                        } else {
+                            LED(3, CRGB::Yellow, 30);
+                        }
+                    }
+                }
+            } else {
+                display.clearDisplay();
+                display.display();
+
+                display.setTextColor(WHITE);
+                display.setTextSize(2);
+                display.setCursor(10, 0);
+                display.println(convert_stdstring_string(returnValue.second)); // json["message"].GetString()
+                display.display();
+            }
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 #include <time.h>
+#include <chrono>
 #include <string>
-#include <iostream>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
@@ -69,14 +69,29 @@ String currentDate() {
     return convert_stdstring_string(buf);
 }
 String currentTime() {
-    time_t     now = time(0);
-    struct tm  tstruct;
-    char       buf[80];
+    auto dayInSeconds = 86400;
+    auto germamyPlusTime = 7200;
+    auto currentTime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock().now().time_since_epoch());
+    auto timeWithoutDays = currentTime % dayInSeconds;
+    auto currentTimeInSeconds = timeWithoutDays.count() + germamyPlusTime;
     
-    tstruct = *localtime(&now);
-    strftime(buf, sizeof(buf), "%X", &tstruct);
+    int hour = currentTimeInSeconds / 60 / 60u;
+    int minute = (currentTimeInSeconds / 60) - (hour * 60u);
+    int second = currentTimeInSeconds - (hour * 60 * 60) - (minute * 60u);
+    
+    String hours = String(hour);
+    String minutes = String(minute);
+    String seconds = String(second);
 
-    return convert_stdstring_string(buf);
+
+//    hs = righT("00" + h,2) 
+    if (hour >= 24) hour = 0;
+
+    if (hour < 10)  hours = "0" + String(hour);
+    if (minute < 10) minutes = "0" + String(minute);
+    if (second < 10) seconds = "0" + String(second);
+
+    return hours + ":" + minutes + ":" + seconds;
 }
 void SetAllLED(CRGB  c) {
 

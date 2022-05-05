@@ -140,8 +140,9 @@ void mainFunc() {
 
 
         DisplayText(currTime);
+        currTime.replace("\n", "  ");
         Serial.println(currTime);
-        
+
 
         States.timeout = millis() + 1000;
         States.updateTime = false;

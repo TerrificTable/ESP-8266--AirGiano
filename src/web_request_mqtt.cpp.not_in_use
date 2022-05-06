@@ -1,14 +1,16 @@
+#include <WiFiClient.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 
 #include <PubSubClient.h>
 
+#include <ArduinoJson.h>
+
 #include <SPI.h>
 #include <Wire.h>
-#include <time.h>
 #include <string>
 #include <stdio.h>
 #include <iostream>
-#include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeSans9pt7b.h>
@@ -39,8 +41,10 @@ int MQTT_Port           = 1883;
 char MQTT_UID[61]       = "mqtt";
 char MQTT_PWD[61]       = "terrific";
 
+
 WiFiClient      espClient;
 PubSubClient    MQTTClient(espClient);
+
 
 typedef struct {
     boolean         WLANConnected               = false;  
@@ -48,18 +52,21 @@ typedef struct {
     unsigned long   WLANConnectingTimeOut       = 0;  
     unsigned long   WLANConnectingWaitTimeOut   = 0;  
 
+
+    boolean         updateTime                  = false;        
+    unsigned long   timeout                     = 0;   
+    
+
     boolean         MQTTConnected               = false;  
     boolean         MQTTConnecting              = false;  
     unsigned long   MQTTConnectingTimeOut       = 0;  
-    unsigned long   MQTTConnectingWaitTimeOut   = 0;
+    unsigned long   MQTTConnectingWaitTimeOut   = 0;   
+
 
     boolean         LEDConnected                = false;  
-
-
 } StatesData;
 
 StatesData States;
-
 
 #include "FastLED.h"
 #define LED_Count   8
@@ -72,37 +79,9 @@ StatesData States;
 CRGB leds[LED_Count];
 
 
-
-String convert_stdstring_string(std::string str) {
-    char stage_1[str.length() + 1];
-    strcpy(stage_1, str.c_str());
-    String result = "";
-
-    for (unsigned int i = 0; i < str.length(); i++) {
-        result += stage_1[i];
-    }
-
-    return result;
-}
-std::string convert_string_stdstring(String str) {
-    char stage_1[str.length() + 1];
-    strcpy(stage_1, str.c_str());
-    std::string result = "";
-
-    for (unsigned int i = 0; i < str.length(); i++) {
-        result += stage_1[i];
-    }
-
-    return result;
-}
 void SetAllLED(CRGB  c) {
 
     for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
-    FastLED.setBrightness(100);
-    FastLED.show();
-}
-void SetLED(int LED_index, CRGB  c) {
-    leds[LED_index] = c;
     FastLED.setBrightness(100);
     FastLED.show();
 }
@@ -143,70 +122,56 @@ void LED(int length, CRGB color, int del) {
     }
 }
 
-void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
-    String rcv = "";
+void mainFunc(char *Topic, byte *payload, unsigned int length) {
+    if (!States.WLANConnected) return;
 
-    for (unsigned int i = 0; i < length; i++)
-    {
-       rcv += (char)payload[i]; // convert *byte to string
-    }
+    if (States.timeout > 0 && millis() < States.timeout) return;
+    if (States.timeout > 0 && millis() > States.timeout) States.timeout  = 0;
 
+    if (!States.updateTime) States.updateTime = true;
 
-    // =============
-    DynamicJsonDocument doc(4096);
-    DeserializationError error = deserializeJson(doc, payload, length);
+    if (States.updateTime && millis() > States.timeout) {
 
-    if (error) {
-        Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.f_str()); 
-        return;  
-    }
+        String rcv = "";
 
-    String message          = doc["message"];   
-    String color            = doc["color"];   
-
-    Serial.println(rcv);
-
-
-    if (message == ".leds") {
-        States.LEDConnected = false;
-        int del = 0;
-        int len = 0;
-
-        del = doc["delay"];
-        len = doc["length"];
-
-        // =============        
-
-
-        if ((len != 0) && (del != 0)) {
-            if (color == "red") {
-                LED(len, CRGB::Red, del);
-            }
-            else if (color == "green") {
-                LED(len, CRGB::Green, del);
-            }
-            else if (color == "blue") {
-                LED(len, CRGB::Blue, del);
-            } else {
-                LED(len, CRGB::Yellow, del);
-            }
-        } else {
-            if (color == "red") {
-                LED(3, CRGB::Red, 30);
-            }
-            else if (color == "green") {
-                LED(3, CRGB::Green, 30);
-            }
-            else if (color == "blue") {
-                LED(3, CRGB::Blue, 30);
-            } else {
-                LED(3, CRGB::Yellow, 30);
-            }
+        for (unsigned int i = 0; i < length; i++) {
+            rcv += (char)payload[i]; // convert *byte to string
         }
-    } else {
-        DisplayText(message);
+
+
+        DynamicJsonDocument json(4096);
+        DeserializationError error = deserializeJson(json, payload, length);
+
+        if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str()); 
+            return;  
+        }
+
+
+        HTTPClient http;
+        String url = json["url"];
+
+        http.begin(espClient, url.c_str());
+        
+        int httpResponseCode = http.GET();
+        if (httpResponseCode>0) {
+            Serial.print("HTTP Response code: ");
+            Serial.println(httpResponseCode);
+            String payload = http.getString();
+            Serial.println(payload);
+        }
+        else {
+            Serial.print("Error code: ");
+            Serial.println(httpResponseCode);
+        }
+
+        http.end();
+
+
+        States.timeout = millis() + 10000;
+        States.updateTime = false;
     }
 }
 
@@ -221,6 +186,7 @@ void setup() {
     display.display();
 
     DisplayText("\nStarting...");
+
 }
 
 void WLAN() {
@@ -264,6 +230,7 @@ void WLAN() {
         States.WLANConnectingWaitTimeOut = millis() + 10000;
     }
 }
+
 void MQTT() {
     if (! States.WLANConnected) return;
 
@@ -272,10 +239,10 @@ void MQTT() {
         States.MQTTConnectingTimeOut = 0;
         States.MQTTConnectingWaitTimeOut = 0;
 
-        MQTTClient.setCallback(MQTTCallBack);
+        MQTTClient.setCallback(mainFunc);
         Serial.println("MQTTClient Connected");
         
-        String Tmp = "AirGiano/json";
+        String Tmp = "AirGiano/http";
         Serial.println("MQTTClient Subscribe: " + Tmp);
     
         MQTTClient.subscribe(Tmp.c_str());
@@ -323,6 +290,6 @@ void MQTT() {
 
 void loop(){
     WLAN();
-    MQTT(); 
+    MQTT();
     LED(5, CRGB::Green, 30);
 }

@@ -57,6 +57,7 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "*.not_in_use": "cpp"
     }
 }

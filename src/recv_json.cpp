@@ -166,16 +166,16 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
     String message          = doc["message"];   
     String color            = doc["color"];   
 
+    Serial.println(rcv);
 
 
     if (message == ".leds") {
-        color = "";
+        States.LEDConnected = false;
         int del = 0;
         int len = 0;
 
-
-        del = atoi(doc["delay"]);
-        len = atoi(doc["length"]);
+        del = doc["delay"];
+        len = doc["length"];
 
         // =============        
 

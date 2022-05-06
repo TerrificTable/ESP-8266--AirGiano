@@ -168,6 +168,8 @@ void LED(int length, CRGB color, int del) {
 
 void mainFunc() {
 
+    if (!States.WLANConnected) return;
+
     if (States.timeout > 0 && millis() < States.timeout) return;
     if (States.timeout > 0 && millis() > States.timeout) States.timeout  = 0;
 
@@ -241,8 +243,8 @@ void setup() {
 }
 
 void loop(){
-    WLAN();
-
     LED(5, CRGB::Cyan, 30);
+
+    WLAN();
     mainFunc();
 }

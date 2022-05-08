@@ -58,6 +58,7 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "string": "cpp",
-        "*.not_in_use": "cpp"
+        "*.not_in_use": "cpp",
+        "arduinojson.h": "c"
     }
 }

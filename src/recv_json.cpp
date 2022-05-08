@@ -36,6 +36,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define MQTT_IP         mqtt_server
 #define MQTT_USERNAME   mqtt_username
 #define MQTT_PASSWORD   mqtt_password
+#define MQTT_TOPIC      mqtt_topic
 #endif
 
 const char *ssid            = STASSID;
@@ -44,6 +45,7 @@ const char *MQTT_Server     = MQTT_IP;
 int MQTT_Port               = 1883;
 const char *MQTT_UID        = MQTT_USERNAME;
 const char *MQTT_PWD        = MQTT_PASSWORD;
+String topic                = MQTT_TOPIC;
 
 
 WiFiClient      espClient;
@@ -283,7 +285,7 @@ void MQTT() {
         MQTTClient.setCallback(MQTTCallBack);
         Serial.println("MQTTClient Connected");
         
-        String Tmp = "AirGiano/json";
+        String Tmp = topic;
         Serial.println("MQTTClient Subscribe: " + Tmp);
     
         MQTTClient.subscribe(Tmp.c_str());

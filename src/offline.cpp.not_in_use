@@ -1,0 +1,182 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h> 
+
+#include <ESP8266HTTPClient.h>
+
+#include <time.h>
+#include <chrono>
+#include <string>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Fonts/FreeSans9pt7b.h>
+
+#define     CONFIG_h
+#include    "config.h"
+
+// pins
+#define LED     D1
+
+#define OLED_RESET      0       // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_WIDTH    128     // OLED display width, in pixels
+#define SCREEN_HEIGHT   64      // OLED display height, in pixels
+
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+
+#ifndef STASSID
+#define STASSID     name        // WLAN Name
+#define STAPSK      passwd      // WLAN Password
+#endif
+
+const char *ssid        = STASSID;
+const char *password    = STAPSK;
+// const char *host = "https://terrifictable.pw";
+
+
+typedef struct {
+    boolean         WLANConnected               = false;  
+    boolean         WLANConnecting              = false;  
+    unsigned long   WLANConnectingTimeOut       = 0;  
+    unsigned long   WLANConnectingWaitTimeOut   = 0; 
+
+
+    boolean         updateTime                  = false;        
+    unsigned long   timeout                     = 0;      
+
+
+    boolean         LEDConnected                = false;
+} StatesData;
+
+StatesData States;
+
+
+#include "FastLED.h"
+#define LED_Count   8
+#define LED_Used    5
+#define LED_PIN     3
+#define LED_TYPE    WS2812B
+
+#define CURSER_Pos  0
+
+CRGB        leds[LED_Count];
+WiFiClient  espClient;
+
+
+String convert_stdstring_string(std::string str) {
+    char stage_1[str.length() + 1];
+    strcpy(stage_1, str.c_str());
+    String result = "";
+
+    for (unsigned int i = 0; i < str.length(); i++) {
+        result += stage_1[i];
+    }
+
+    return result;
+}
+std::string convert_string_stdstring(String str) {
+    char stage_1[str.length() + 1];
+    strcpy(stage_1, str.c_str());
+    std::string result = "";
+
+    for (unsigned int i = 0; i < str.length(); i++) {
+        result += stage_1[i];
+    }
+
+    return result;
+}
+
+void GetURL(char host, int port) {
+    // TODO
+
+    WiFiClient client;
+    if (!client.connect(host, port)) {
+        Serial.println("connection failed");
+        return;
+    } 
+
+    String url = "/";
+    client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+    
+    unsigned long connTimeout = millis();
+
+    if (millis() - connTimeout > 5000) {
+        Serial.println("GET (" + String(host) + "): time out");
+        client.stop();
+        return;
+    }
+
+    while (client.available()) {
+        String line = client.readStringUntil('\r'); 
+        Serial.print(line);
+    }
+}
+
+void mainFunc() {
+
+    if (States.timeout > 0 && millis() < States.timeout) return;
+    if (States.timeout > 0 && millis() > States.timeout) States.timeout  = 0;
+
+    if (!States.updateTime) States.updateTime = true;
+
+    if (States.updateTime && millis() > States.timeout) {
+
+        States.timeout = millis() + 1000;   // 10sec delay
+        States.updateTime = false;
+    }
+}
+
+void WLAN() {
+    if (! States.WLANConnected &&  WiFi.status() == WL_CONNECTED) {
+        States.WLANConnecting = false;
+        States.WLANConnectingWaitTimeOut = 0;
+        Serial.print("WiFi Connected: ");
+        Serial.println(WiFi.localIP());
+    }
+
+    States.WLANConnected = WiFi.status() == WL_CONNECTED || WiFi.status()  == WL_IDLE_STATUS;
+    
+    if (States.WLANConnected) return;  
+    
+    
+    if (States.WLANConnectingWaitTimeOut > 0 && millis() < States.WLANConnectingWaitTimeOut ) return;
+    if (States.WLANConnectingWaitTimeOut > 0 && millis() > States.WLANConnectingWaitTimeOut ) States.WLANConnectingWaitTimeOut = 0;
+
+
+    if (!States.WLANConnecting) {
+        States.WLANConnecting = true;
+        States.WLANConnectingTimeOut = millis() + 10000;  // 10 Sekunfen
+        Serial.println("WiFi connecting....");
+        
+        WiFi.persistent(false); 
+        WiFi.mode( WIFI_OFF );
+        delay( 1 );
+        WiFi.disconnect();
+        WiFi.begin(ssid, password);
+        return;
+    }
+
+    if (States.WLANConnecting &&  millis() > States.WLANConnectingTimeOut) {
+        States.WLANConnecting  = false;
+        Serial.println("WiFi connecting failed....");
+        States.WLANConnectingWaitTimeOut = millis() + 10000;
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    delay(100);
+    
+    Serial.println("\nStarting...");
+
+    // display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    // display.clearDisplay();
+    // display.display();
+
+}
+
+void loop(){
+    WLAN();
+
+    mainFunc();
+}

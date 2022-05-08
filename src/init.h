@@ -11,4 +11,5 @@ void setup() {
     delay(100);
     
     Serial.println("\nBooting...");
+    DisplayText("S\ntarting...");
 }

@@ -2,7 +2,7 @@
 const char *name                = "WLAN NAME";
 const char *passwd              = "WLAN PASSWORD";
 
-const char mqtt_server[]        = "MQTT SERVER IP";
+const char mqtt_server[]        = "IP TO MQTT SERVER";
 const char mqtt_username[]      = "MQTT USERNAME";
 const char mqtt_password[]      = "MQTT PASSWORD";
 #else

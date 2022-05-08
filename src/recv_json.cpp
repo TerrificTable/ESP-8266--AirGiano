@@ -27,17 +27,20 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// Get WLAN/WiFi Configurations
 #ifndef STASSID
 #define STASSID         name
 #define STAPSK          passwd
 #endif
 
+// Get MQTT Configurations
 #ifndef MQTT_IP
 #define MQTT_IP         mqtt_server
 #define MQTT_USERNAME   mqtt_username
 #define MQTT_PASSWORD   mqtt_password
 #endif
 
+// Set Variables
 const char *ssid            = STASSID;
 const char *password        = STAPSK;
 const char *MQTT_Server     = MQTT_IP;

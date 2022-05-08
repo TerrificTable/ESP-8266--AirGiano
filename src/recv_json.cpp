@@ -28,16 +28,23 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #ifndef STASSID
-#define STASSID     name
-#define STAPSK      passwd
+#define STASSID         name
+#define STAPSK          passwd
 #endif
 
-const char *ssid        = STASSID;
-const char *password    = STAPSK;
-char MQTT_Server[61]    = "192.168.100.75";
-int MQTT_Port           = 1883;
-char MQTT_UID[61]       = "mqtt";
-char MQTT_PWD[61]       = "terrific";
+#ifndef MQTT_IP
+#define MQTT_IP         mqtt_server
+#define MQTT_USERNAME   mqtt_username
+#define MQTT_PASSWORD   mqtt_password
+#endif
+
+const char *ssid            = STASSID;
+const char *password        = STAPSK;
+const char *MQTT_Server     = MQTT_IP;
+int MQTT_Port               = 1883;
+const char *MQTT_UID        = MQTT_USERNAME;
+const char *MQTT_PWD        = MQTT_PASSWORD;
+
 
 WiFiClient      espClient;
 PubSubClient    MQTTClient(espClient);
@@ -211,6 +218,7 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 }
 
 void setup() {
+    Wire.begin();
     Serial.begin(115200);
     delay(100);
     

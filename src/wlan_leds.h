@@ -90,6 +90,31 @@ std::string convert_string_stdstring(String str) {
 
     return result;
 }
+String currentTime() {
+    auto dayInSeconds = 86400;
+    auto germamyPlusTime = 7200;
+    auto currentTime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock().now().time_since_epoch());
+    auto timeWithoutDays = currentTime % dayInSeconds;
+    auto currentTimeInSeconds = timeWithoutDays.count() + germamyPlusTime;
+    
+    int hour = currentTimeInSeconds / 60 / 60u;
+    int minute = (currentTimeInSeconds / 60) - (hour * 60u);
+    int second = currentTimeInSeconds - (hour * 60 * 60) - (minute * 60u);
+    
+    String hours = String(hour);
+    String minutes = String(minute);
+    String seconds = String(second);
+
+
+//    hs = righT("00" + h,2) 
+    if (hour >= 24) hour = 0;
+
+    if (hour < 10)  hours = "0" + String(hour);
+    if (minute < 10) minutes = "0" + String(minute);
+    if (second < 10) seconds = "0" + String(second);
+
+    return hours + ":" + minutes + ":" + seconds;
+}
 void SetAllLED(CRGB  c) {
 
     for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
@@ -236,6 +261,10 @@ void WLAN() {
     }
 }
 
+
+void sendMQTT(String data) {
+    MQTTClient.publish("AirGiano/send", data.c_str());
+}
 
 void MQTT() {
     if (! States.WLANConnected) return;

@@ -1,6 +1,7 @@
 
 #include "screen.h"
 #include "wlan_leds.h"
+#include "scd30.h"
 
 
 
@@ -23,5 +24,8 @@ void setup() {
 void loop(){
     WLAN();
     MQTT(); 
+
     LED(5, CRGB::Green, 30);
+
+    SCD30();
 }

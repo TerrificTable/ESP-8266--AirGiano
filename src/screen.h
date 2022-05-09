@@ -14,7 +14,7 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
-#define CURSER_Pos  0
+#define CURSER_POS  0
 
 
 
@@ -24,7 +24,7 @@ void DisplayText(String text) {
 
     display.setTextColor(WHITE);
     display.setTextSize(2);
-    display.setCursor(CURSER_Pos, 0);
+    display.setCursor(CURSER_POS, 0);
     display.println(text);
     display.display();
 }

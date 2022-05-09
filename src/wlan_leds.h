@@ -2,11 +2,6 @@
 
 #include <PubSubClient.h>
 
-#include <SPI.h>
-#include <Wire.h>
-#include <string>
-#include <stdio.h>
-#include <iostream>
 #include <ArduinoJson.h>
 
 

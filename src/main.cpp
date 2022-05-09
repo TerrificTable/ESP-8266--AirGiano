@@ -1,6 +1,4 @@
 
-
-
 #include "screen.h"
 #include "wlan_leds.h"
 

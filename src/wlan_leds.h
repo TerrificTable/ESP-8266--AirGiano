@@ -151,6 +151,7 @@ void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
     Serial.println(rcv);
 
+    // Hallo
 
     if (message == ".leds") {
         States.LEDConnected = false;

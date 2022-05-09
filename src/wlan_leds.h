@@ -1,49 +1,38 @@
-#include <WiFiClient.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
 
 #include <PubSubClient.h>
-
-#include <ArduinoJson.h>
 
 #include <SPI.h>
 #include <Wire.h>
 #include <string>
 #include <stdio.h>
 #include <iostream>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Fonts/FreeSans9pt7b.h>
+#include <ArduinoJson.h>
 
 
 #define                 CONFIG_h
 #include                "config.h"
 
-// OLED pins
-#define SDA             D1
-#define SCL             D2
-
-#define OLED_RESET      0       // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_WIDTH    128     // OLED display width, in pixels
-#define SCREEN_HEIGHT   64      // OLED display height, in pixels
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #ifndef STASSID
-#define STASSID     name
-#define STAPSK      passwd
+#define STASSID         name
+#define STAPSK          passwd
 #endif
 
-const char *ssid        = STASSID;
-const char *password    = STAPSK;
-char MQTT_Server[61]    = "192.168.100.75";
-int MQTT_Port           = 1883;
-char MQTT_UID[61]       = "mqtt";
-char MQTT_PWD[61]       = "terrific";
+#ifndef MQTT_IP
+#define MQTT_IP         mqtt_server
+#define MQTT_USERNAME   mqtt_username
+#define MQTT_PASSWORD   mqtt_password
+#define MQTT_TOPIC      mqtt_topic
+#endif
 
-
-WiFiClient      espClient;
-PubSubClient    MQTTClient(espClient);
+const char *ssid            = STASSID;
+const char *password        = STAPSK;
+const char *MQTT_Server     = MQTT_IP;
+int MQTT_Port               = 1883;
+const char *MQTT_UID        = MQTT_USERNAME;
+const char *MQTT_PWD        = MQTT_PASSWORD;
+String topic                = MQTT_TOPIC;
 
 
 typedef struct {
@@ -52,21 +41,16 @@ typedef struct {
     unsigned long   WLANConnectingTimeOut       = 0;  
     unsigned long   WLANConnectingWaitTimeOut   = 0;  
 
-
-    boolean         updateTime                  = false;        
-    unsigned long   timeout                     = 0;   
-    
-
     boolean         MQTTConnected               = false;  
     boolean         MQTTConnecting              = false;  
     unsigned long   MQTTConnectingTimeOut       = 0;  
-    unsigned long   MQTTConnectingWaitTimeOut   = 0;   
-
+    unsigned long   MQTTConnectingWaitTimeOut   = 0;
 
     boolean         LEDConnected                = false;  
 } StatesData;
 
 StatesData States;
+
 
 #include "FastLED.h"
 #define LED_Count   8
@@ -74,26 +58,51 @@ StatesData States;
 #define LED_PIN     3
 #define LED_TYPE    WS2812B
 
-#define CURSER_Pos  0
 
 CRGB leds[LED_Count];
 
 
+
+WiFiClient      espClient;
+PubSubClient    MQTTClient(espClient);
+
+
+
+
+
+
+String convert_stdstring_string(std::string str) {
+    char stage_1[str.length() + 1];
+    strcpy(stage_1, str.c_str());
+    String result = "";
+
+    for (unsigned int i = 0; i < str.length(); i++) {
+        result += stage_1[i];
+    }
+
+    return result;
+}
+std::string convert_string_stdstring(String str) {
+    char stage_1[str.length() + 1];
+    strcpy(stage_1, str.c_str());
+    std::string result = "";
+
+    for (unsigned int i = 0; i < str.length(); i++) {
+        result += stage_1[i];
+    }
+
+    return result;
+}
 void SetAllLED(CRGB  c) {
 
     for (int i = 0; i < LED_Used; i++) { leds[i] = c; }
     FastLED.setBrightness(100);
     FastLED.show();
 }
-void DisplayText(String text) {
-    display.clearDisplay();
-    display.display();
-
-    display.setTextColor(WHITE);
-    display.setTextSize(2);
-    display.setCursor(CURSER_Pos, 0);
-    display.println(text);
-    display.display();
+void SetLED(int LED_index, CRGB  c) {
+    leds[LED_index] = c;
+    FastLED.setBrightness(100);
+    FastLED.show();
 }
 
 void LED(int length, CRGB color, int del) {
@@ -122,72 +131,73 @@ void LED(int length, CRGB color, int del) {
     }
 }
 
+void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
-void mainFunc(char *Topic, byte *payload, unsigned int length) {
-    if (!States.WLANConnected) return;
+    String rcv = "";
 
-    if (States.timeout > 0 && millis() < States.timeout) return;
-    if (States.timeout > 0 && millis() > States.timeout) States.timeout  = 0;
+    for (unsigned int i = 0; i < length; i++)
+    {
+       rcv += (char)payload[i]; // convert *byte to string
+    }
 
-    if (!States.updateTime) States.updateTime = true;
 
-    if (States.updateTime && millis() > States.timeout) {
+    // =============
+    DynamicJsonDocument doc(4096);
+    DeserializationError error = deserializeJson(doc, payload, length);
 
-        String rcv = "";
+    if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str()); 
+        return;  
+    }
 
-        for (unsigned int i = 0; i < length; i++) {
-            rcv += (char)payload[i]; // convert *byte to string
+    String message          = doc["message"];   
+    String color            = doc["color"];   
+
+    Serial.println(rcv);
+
+
+    if (message == ".leds") {
+        States.LEDConnected = false;
+        int del = 0;
+        int len = 0;
+
+        del = doc["delay"];
+        len = doc["length"];
+
+        // =============        
+
+
+        if ((len != 0) && (del != 0)) {
+            if (color == "red") {
+                LED(len, CRGB::Red, del);
+            }
+            else if (color == "green") {
+                LED(len, CRGB::Green, del);
+            }
+            else if (color == "blue") {
+                LED(len, CRGB::Blue, del);
+            } else {
+                LED(len, CRGB::Yellow, del);
+            }
+        } else {
+            if (color == "red") {
+                LED(3, CRGB::Red, 30);
+            }
+            else if (color == "green") {
+                LED(3, CRGB::Green, 30);
+            }
+            else if (color == "blue") {
+                LED(3, CRGB::Blue, 30);
+            } else {
+                LED(3, CRGB::Yellow, 30);
+            }
         }
-
-
-        DynamicJsonDocument json(4096);
-        DeserializationError error = deserializeJson(json, payload, length);
-
-        if (error) {
-            Serial.print(F("deserializeJson() failed: "));
-            Serial.println(error.f_str()); 
-            return;  
-        }
-
-
-        HTTPClient http;
-        String url = json["url"];
-
-        http.begin(espClient, url.c_str());
-        
-        int httpResponseCode = http.GET();
-        if (httpResponseCode>0) {
-            Serial.print("HTTP Response code: ");
-            Serial.println(httpResponseCode);
-            String payload = http.getString();
-            Serial.println(payload);
-        }
-        else {
-            Serial.print("Error code: ");
-            Serial.println(httpResponseCode);
-        }
-
-        http.end();
-
-
-        States.timeout = millis() + 10000;
-        States.updateTime = false;
+    } else {
+        DisplayText(message);
     }
 }
 
-void setup() {
-    Serial.begin(115200);
-    delay(100);
-    
-    Serial.println("\nBooting...");
-
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    display.clearDisplay();
-    display.display();
-
-    DisplayText("\nStarting...");
-
-}
 
 void WLAN() {
     if (! States.WLANConnected &&  WiFi.status() == WL_CONNECTED) {
@@ -231,6 +241,7 @@ void WLAN() {
     }
 }
 
+
 void MQTT() {
     if (! States.WLANConnected) return;
 
@@ -239,10 +250,10 @@ void MQTT() {
         States.MQTTConnectingTimeOut = 0;
         States.MQTTConnectingWaitTimeOut = 0;
 
-        MQTTClient.setCallback(mainFunc);
+        MQTTClient.setCallback(MQTTCallBack);
         Serial.println("MQTTClient Connected");
         
-        String Tmp = "AirGiano/http";
+        String Tmp = topic;
         Serial.println("MQTTClient Subscribe: " + Tmp);
     
         MQTTClient.subscribe(Tmp.c_str());
@@ -286,10 +297,4 @@ void MQTT() {
     }
 
     return ;    // Waiting for MQTT connection
-}
-
-void loop(){
-    WLAN();
-    MQTT();
-    LED(5, CRGB::Green, 30);
 }

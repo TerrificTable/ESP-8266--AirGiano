@@ -134,9 +134,7 @@ void LED(int length, CRGB color, int del) {
 void MQTTCallBack(char *Topic, byte *payload, unsigned int length) {
 
     String rcv = "";
-
-    for (unsigned int i = 0; i < length; i++)
-    {
+    for (unsigned int i = 0; i < length; i++) {
        rcv += (char)payload[i]; // convert *byte to string
     }
 

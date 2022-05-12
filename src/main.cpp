@@ -1,31 +1,41 @@
+#include <Wire.h>
+#include <SPI.h>
 
 #include "screen.h"
-#include "wlan_leds.h"
-#include "scd30.h"
-
+#include "wlan.h"
 
 
 
 void setup() {
-    Wire.begin();
     Serial.begin(115200);
     delay(100);
-    
-    Serial.println("\nBooting...");
+    Serial.println("\nStarting...");
 
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    display.clearDisplay();
-    display.display();
+    oled_init();
 
-    DisplayText("\nStarting...");
 }
 
 
-void loop(){
-    WLAN();
-    MQTT(); 
+void loop() { 
+    WLAN_Connect();
+    WIFI_AccessPoint();
+    WEB();
 
-    LED(5, CRGB::Green, 30);
 
-    SCD30();
+    static unsigned long    Timer       = 0;
+    static boolean          pressed     = false;
+
+    if (millis() > Timer ) {
+        Timer = millis() + 10000;
+
+        // Draw Image and GitHub Text and Follow Button
+
+        srand(time(0));
+        if ((rand() % 100) > 50)
+            pressed = true;
+        else
+            pressed = false;
+
+        drawImageAndText(pressed);
+    }
 }

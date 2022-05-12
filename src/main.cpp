@@ -3,6 +3,7 @@
 
 #include "screen.h"
 #include "wlan.h"
+#include "sdc30.h"
 
 
 
@@ -20,6 +21,7 @@ void loop() {
     WLAN_Connect();
     WIFI_AccessPoint();
     WEB();
+    SDC30();
 
 
     static unsigned long    Timer       = 0;
@@ -28,14 +30,11 @@ void loop() {
     if (millis() > Timer ) {
         Timer = millis() + 10000;
 
-        // Draw Image and GitHub Text and Follow Button
-
         srand(time(0));
-        if ((rand() % 100) > 50)
-            pressed = true;
-        else
-            pressed = false;
+        if ((rand() % 100) > 50) pressed = true;
+        else pressed = false;
 
+        // Draw Image and GitHub Text and Follow Button
         drawImageAndText(pressed);
     }
 }

@@ -24,7 +24,7 @@ SCD30 airSensor;
 void SDC30() {
 
     if (!ConfigSDC30.Connected) {
-        DisplayText("Wait 2 Seconds");
+        // DisplayText("Wait 2 Seconds");
 
         if (airSensor.begin() == false) {
             Serial.println("Air sensor not detected. Please check wiring. Restarting in 5sec...");
@@ -82,7 +82,6 @@ void SDC30() {
             ConfigSDC30.Co2 = airSensor.getCO2();
             ConfigSDC30.Temperature = airSensor.getTemperature();
             ConfigSDC30.Humidity = airSensor.getHumidity();
-            // Serial.printf("\nCO2: %i\t",airSensor.getCO2() );
         }
     }
 
@@ -97,7 +96,6 @@ void SDC30() {
     Data[RingBufferPos][1] = ConfigSDC30.Temperature;
     Data[RingBufferPos][2] = ConfigSDC30.Humidity;
 
-    // Serial.printf("\nRingBufferPos: %i\t CO2: %i\t TEMPERATURE: %.1f\t HUMIDITY: %i\t",RingBufferPos, ConfigSDC30.Co2,ConfigSDC30.Temperature,ConfigSDC30.Humidity);
 
     if (millis() >= ConfigSDC30.TimeOut) {
         Serial.println("001 Sensort, SDC30 ERROR");
@@ -113,10 +111,10 @@ void SDC30() {
     {
         Serial.printf("\nCO2: %i\n TEMPERATURE: %.1f\n HUMIDITY: %i%\n \n", ConfigSDC30.Co2, ConfigSDC30.Temperature, airSensor.getHumidity());
 
-        DisplayText(currentTime()  +  \
-                    "\n" + "CO2: " + String(ConfigSDC30.Co2) +
-                    "\n" + "C:   " + String(ConfigSDC30.Temperature) +
-                    "\n" + "lf%: " + String(airSensor.getHumidity()));
+        // DisplayText(currentTime()  +  \
+        //             "\n" + "CO2: " + String(ConfigSDC30.Co2) +
+        //             "\n" + "C:   " + String(ConfigSDC30.Temperature) +
+        //             "\n" + "lf%: " + String(airSensor.getHumidity()));
 
         sendMQTT("{ \"CO2\": " + String(ConfigSDC30.Co2) + ", \"Temp\": " + String(ConfigSDC30.Temperature) + ", \"Hum\": " + String(airSensor.getHumidity()) + " }");
         

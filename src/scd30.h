@@ -60,6 +60,8 @@ void SDC30() {
             delay(5000);
             ESP.restart();
         }
+        
+        // Hi
 
         airSensor.setAutoSelfCalibration(false); // Sensirion no auto calibration
         airSensor.setMeasurementInterval(2);

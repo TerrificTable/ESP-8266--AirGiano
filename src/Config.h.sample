@@ -6,5 +6,4 @@ const char mqtt_server[]        = "IP TO MQTT SERVER";
 const char mqtt_username[]      = "MQTT USERNAME";
 const char mqtt_password[]      = "MQTT PASSWORD";
 String     mqtt_topic           = "MQTT TOPIC";
-
 #endif
